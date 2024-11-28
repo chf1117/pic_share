@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片分享 - 免费高清图片分享平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        /* 导航栏样式 */
+        .navbar {
+            padding: 1rem 2rem;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* 英雄区样式 */
+        .hero {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1707343843437-caacff5cfa74');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 6rem 0;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: bold;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* 搜索框样式 */
+        .search-box {
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .search-box input {
+            border: none;
+            border-radius: 30px;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            padding-right: 50px;
+        }
+        .search-box button {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: none;
+            color: #666;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .search-box button:hover {
+            color: #007bff;
+        }
+
+        /* 热门标签样式 */
+        .popular-tags {
+            margin-top: 1rem;
+            text-align: center;
+        }
+        .tag-btn {
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            margin: 0.2rem;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .tag-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        /* 年份选择区域样式 */
+        .year-selector {
+            background-color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .year-selector.show {
+            display: block;
+        }
+        .year-selector .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        .year-btn {
+            padding: 0.5rem 1.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .year-btn:hover {
+            background: #f8f9fa;
+            border-color: #adb5bd;
+        }
+        .year-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* 瀑布流布局 */
+        .waterfall {
+            column-count: 4;
+            column-gap: 20px;
+            padding: 20px 0;
+        }
+
+        @media (max-width: 1200px) {
+            .waterfall {
+                column-count: 3;
+            }
+            .month-images {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 25px;  
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .waterfall {
+                column-count: 2;
+            }
+            .month-title {
+                font-size: 24px;
+                margin-bottom: 20px;
+                color: #333;
+                border-bottom: 2px solid #eee;
+                padding-bottom: 10px;
+            }
+            .month-images {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            .month-images .image-card {
+                margin: 0;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .waterfall {
+                column-count: 1;
+            }
+        }
+
+        .image-card {
+            break-inside: avoid;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+        }
+
+        .image-info {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .image-info-left {
+            flex-grow: 1;
+        }
+        .like-button {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        .like-button:hover {
+            background-color: rgba(255, 99, 132, 0.1);
+            color: #ff6384;
+        }
+        .like-button.liked {
+            color: #ff6384;
+        }
+        .like-button i {
+            font-size: 1.1rem;
+        }
+        .like-count {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .tag {
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .photo-time {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 8px;
+        }
+
+        /* 加载更多按钮 */
+        .load-more {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .load-more:hover {
+            background: #0056b3;
+        }
+
+        .load-more:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading i {
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 页脚样式 */
+        footer {
+            background-color: #343a40;
+            color: #fff;
+            padding: 2rem 0;
+            margin-top: 2rem;
+        }
+        footer a {
+            color: #fff;
+            text-decoration: none;
+        }
+        footer a:hover {
+            color: #007bff;
+        }
+
+        /* 图片预览模态框样式 */
+        .image-preview-modal .modal-dialog {
+            max-width: 90%;
+            margin: 1.75rem auto;
+        }
+        .image-preview-modal .modal-content {
+            background-color: rgba(0, 0, 0, 0.9);
+            border: none;
+        }
+        .image-preview-modal .modal-body {
+            padding: 0;
+            text-align: center;
+            position: relative;
+        }
+        .image-preview-modal img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            margin: auto;
+        }
+        .image-preview-modal .modal-header {
+            border: none;
+            padding: 1rem;
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 1;
+        }
+        .image-preview-modal .btn-close {
+            background-color: rgba(255, 255, 255, 0.3);
+            padding: 1rem;
+            margin: 0;
+            border-radius: 50%;
+            backdrop-filter: blur(5px);
+        }
+        .image-preview-modal .btn-close:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+        /* 添加功能按钮样式 */
+        .image-actions {
+            position: absolute;
+            right: 20px;
+            top: 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1;
+        }
+        .image-action-btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .image-action-btn:hover {
+            background-color: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+        .image-action-btn i {
+            font-size: 1.2rem;
+        }
+
+        .nav-links {
+            margin-bottom: 1rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.1);
+            font-size: 1rem;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+        
+        .nav-links a.active {
+            background: rgba(255,255,255,0.3);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 导航栏样式补充 */
+        .year-selector-inline,
+        .year-selector-inline .nav-link,
+        .year-selector-inline .nav-link:hover,
+        .year-selector-inline .nav-link.active {
+            display: none;
+        }
+
+        /* 私密按钮样式 */
+        #privateToggle {
+            transition: all 0.3s ease;
+        }
+        #privateToggle.active {
+            background-color: #6c757d;
+            color: white;
+        }
+        #privateToggle i {
+            margin-right: 5px;
+        }
+
+        /* 添加月份区域样式 */
+        .month-section {
+            margin: 40px 0;  
+            padding: 30px;   
+            background: #f8f9fa;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);  
+        }
+        
+        .month-title {
+            font-size: 2.5em;  
+            font-family: "Times New Roman", serif;  
+            font-style: italic;  
+            margin-bottom: 35px;  
+            color: #2c3e50;  
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e9ecef;  
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);  
+            letter-spacing: 2px;  
+        }
+        
+        .month-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 25px;  
+            padding: 15px;
+        }
+
+        /* 在年份视图中移除瀑布流样式 */
+        .year-view {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .month-section {
+            margin-bottom: 30px;
+        }
+        
+        .month-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .month-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .month-images .image-card {
+            margin: 0;
+            width: 100%;
+        }
+
+        #waterfall {
+            margin-top: 80px;
+            padding: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .image-card {
+            position: static !important;
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* 移动端优化样式 */
+        @media (max-width: 768px) {
+            .modal.image-preview-modal {
+                margin: 0;
+                padding: 0;
+                background: rgba(0, 0, 0, 0.9);
+            }
+            
+            .image-preview-modal .modal-dialog {
+                margin: 0;
+                max-width: 100%;
+                height: 100vh;
+                display: flex;
+                align-items: center;
+            }
+            
+            .image-preview-modal .modal-content {
+                background: transparent;
+                border: none;
+                height: auto;
+                max-height: 100vh;
+                position: relative;
+                z-index: 1;
+            }
+            
+            .image-preview-modal .modal-body {
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                position: relative;
+                z-index: 1;
+            }
+            
+            .image-preview-modal img {
+                max-height: 90vh;
+                width: auto;
+                max-width: 100%;
+                object-fit: contain;
+                position: relative;
+                z-index: 2;
+            }
+
+            /* 控制层 - 在图片下方 */
+            .modal-backdrop {
+                z-index: 1;
+            }
+
+            /* 半透明背景 - 在图片下方 */
+            .image-preview-modal::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 30%, transparent 70%, rgba(0,0,0,0.5));
+                z-index: 1;
+                pointer-events: none;
+            }
+
+            /* 隐藏移动端关闭按钮 */
+            .image-preview-modal .modal-header {
+                display: none;
+            }
+
+            /* 移动端功能按钮样式 */
+            .image-preview-modal .image-actions {
+                position: fixed !important; /* 覆盖默认样式 */
+                bottom: 30px !important;
+                top: auto !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 20px !important;
+                z-index: 3;
+                padding: 15px;
+                background: none;
+                width: auto !important;
+            }
+
+            .image-action-btn {
+                background-color: rgba(255, 255, 255, 0.2);
+                width: 45px;
+                height: 45px;
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+            }
+
+            .image-action-btn:active {
+                transform: scale(0.95);
+                background-color: rgba(255, 255, 255, 0.25);
+            }
+
+            /* 添加触摸反馈 */
+            .image-preview-modal .modal-content {
+                touch-action: pan-y pinch-zoom;
+            }
+
+            /* 优化滑动切换动画 */
+            .modal-body img {
+                transition: transform 0.3s ease-out;
+            }
+        }
+
+        /* 移动设备样式 */
+        .touch-device .image-preview-modal {
+            margin: 0;
+            padding: 0;
+        }
+        
+        .touch-device .image-preview-modal .modal-dialog {
+            margin: 0;
+            max-width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        
+        .touch-device .image-preview-modal .modal-content {
+            background: transparent;
+            border: none;
+            height: auto;
+            max-height: 100vh;
+        }
+        
+        .touch-device .image-preview-modal .modal-header {
+            border: none;
+            padding: 10px;
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 1050;
+        }
+        
+        .touch-device .image-preview-modal .btn-close {
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            margin: 0;
+            padding: 10px;
+        }
+        
+        .touch-device .image-preview-modal .modal-body {
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .touch-device .image-preview-modal #previewImage {
+            max-height: 90vh;
+            max-width: 100%;
+            object-fit: contain;
+        }
+        
+        .touch-device .image-preview-modal .image-actions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 20px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">图片分享平台</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="setSortOrder('likes')">热门</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick="setSortOrder('date')">日期</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    {% if session.get('username') %}
+                    <button id="privateToggle" class="btn btn-outline-secondary me-2" onclick="togglePrivate()">
+                        <i class="fas fa-lock"></i> 私密
+                    </button>
+                    <a href="/upload" class="btn btn-primary me-2">
+                        <i class="fas fa-upload"></i> 上传
+                    </a>
+                    <a href="/manage" class="btn btn-outline-primary me-2">管理</a>
+                    <a href="/logout" class="btn btn-outline-secondary">登出</a>
+                    {% else %}
+                    <a href="/login" class="btn btn-outline-secondary me-2">登录</a>
+                    <a href="/register" class="btn btn-outline-secondary">注册</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 英雄区 -->
+    <div class="hero">
+        <div class="container">
+            <h1>发现精彩图片</h1>
+            <p>探索和分享高质量图片</p>
+            <div class="search-section">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="输入标签搜索图片，如：风景、美食、旅行..." aria-label="搜索">
+                    <button id="searchButton" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="popular-tags">
+                <span class="tag-btn" onclick="searchTag('风景')">风景</span>
+                <span class="tag-btn" onclick="searchTag('旅行')">旅行</span>
+                <span class="tag-btn" onclick="searchTag('壁纸')">壁纸</span>
+                <span class="tag-btn" onclick="searchTag('人文')">人文</span>
+                <span class="tag-btn" onclick="searchTag('情绪')">情绪</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 年份选择区域 -->
+    <div class="year-selector" id="yearSelector">
+        <div class="container">
+            <button class="year-btn" onclick="updateAllPhotoTimes()">更新时间</button>
+            <!-- 年份按钮将通过JavaScript动态生成 -->
+        </div>
+    </div>
+
+    <!-- 瀑布流图片展示 -->
+    <div class="container">
+        <div class="waterfall" id="waterfall"></div>
+        <div class="loading">
+            <i class="fas fa-spinner fa-2x"></i>
+        </div>
+        <button class="load-more" id="loadMore">加载更多</button>
+    </div>
+
+    <!-- 图片预览模态框 -->
+    <div class="modal fade image-preview-modal" id="imagePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <img id="previewImage" src="" alt="Preview">
+                    <div class="image-actions">
+                        <button class="image-action-btn" title="点赞" onclick="handleLike()">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        <button class="image-action-btn" title="分享" onclick="handleShare()">
+                            <i class="fas fa-share-alt"></i>
+                        </button>
+                        <button class="image-action-btn" title="AI配文" onclick="handleAICaption()">
+                            <i class="fas fa-magic"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5>关于我们</h5>
+                    <p>免费高清图片分享平台，致力于为用户提供优质的图片分享服务。</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>快速链接</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="/about">关于我们</a></li>
+                        <li><a href="/terms">使用条款</a></li>
+                        <li><a href="/privacy">隐私政策</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>联系我们</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="mailto:contact@example.com">contact@example.com</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentTag = '';
+        let currentSort = 'likes';
+        let currentYear = '';
+        let isPrivateMode = false;  // 添加私密模式状态变量
+        
+        // 设备检测
+        function detectDevice() {
+            const html = document.documentElement;
+            
+            // 检测触摸能力
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                html.classList.add('touch-device');
+            }
+            
+            // 检测指针类型
+            if (window.matchMedia('(pointer: coarse)').matches) {
+                html.classList.add('touch-pointer');
+            }
+            
+            // 检测移动设备方向
+            if ('orientation' in window || 'onorientationchange' in window) {
+                html.classList.add('mobile-device');
+            }
+            
+            // 检测是否为iOS设备
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                html.classList.add('ios-device');
+            }
+            
+            // 检测是否为Android设备
+            if (/Android/.test(navigator.userAgent)) {
+                html.classList.add('android-device');
+            }
+        }
+
+        // 初始化触摸事件
+        function initTouchEvents() {
+            const modal = document.getElementById('imagePreviewModal');
+            const modalBody = modal.querySelector('.modal-body');
+            
+            // 只在触摸设备上添加触摸事件
+            if (document.documentElement.classList.contains('touch-device')) {
+                modalBody.addEventListener('touchstart', function(e) {
+                    touchStartX = e.touches[0].clientX;
+                }, { passive: true });
+                
+                modalBody.addEventListener('touchmove', function(e) {
+                    touchEndX = e.touches[0].clientX;
+                }, { passive: true });
+                
+                modalBody.addEventListener('touchend', function() {
+                    handleSwipe();
+                });
+                
+                // 点击关闭模态框
+                modalBody.addEventListener('click', function(e) {
+                    if (e.target === modalBody || e.target === document.getElementById('previewImage')) {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('imagePreviewModal'));
+                        modal.hide();
+                    }
+                });
+            }
+        }
+        
+        // 处理滑动
+        function handleSwipe() {
+            // 只在触摸设备上处理滑动
+            if (!document.documentElement.classList.contains('touch-device')) {
+                return;
+            }
+            
+            const swipeDistance = touchEndX - touchStartX;
+            const minSwipeDistance = 50;
+            
+            if (Math.abs(swipeDistance) > minSwipeDistance) {
+                if (swipeDistance > 0) {
+                    showPreviousImage();
+                } else {
+                    showNextImage();
+                }
+            }
+        }
+        
+        // 显示上一张图片
+        function showPreviousImage() {
+            const currentImage = document.querySelector('#previewImage');
+            const currentSrc = currentImage.src;
+            const allImages = Array.from(document.querySelectorAll('.image-container img'));
+            const currentIndex = allImages.findIndex(img => img.src === currentSrc);
+            
+            if (currentIndex > 0) {
+                currentImage.src = allImages[currentIndex - 1].src;
+            }
+        }
+        
+        // 显示下一张图片
+        function showNextImage() {
+            const currentImage = document.querySelector('#previewImage');
+            const currentSrc = currentImage.src;
+            const allImages = Array.from(document.querySelectorAll('.image-container img'));
+            const currentIndex = allImages.findIndex(img => img.src === currentSrc);
+            
+            if (currentIndex < allImages.length - 1) {
+                currentImage.src = allImages[currentIndex + 1].src;
+            }
+        }
+
+        // 设置排序方式
+        function setSortOrder(sort) {
+            currentSort = sort;
+            currentPage = 1;
+            
+            // 如果点击日期，显示年份选择器
+            const yearSelector = document.getElementById('yearSelector');
+            if (sort === 'date') {
+                if (!yearSelector.classList.contains('show')) {
+                    yearSelector.classList.add('show');
+                    loadYears();
+                }
+            } else {
+                yearSelector.classList.remove('show');
+                currentYear = '';
+            }
+            
+            // 重置私密模式的情况
+            if (sort === 'likes' || sort === 'date') {
+                isPrivateMode = false;
+                const btn = document.getElementById('privateToggle');
+                if (btn) {
+                    btn.classList.remove('active');
+                    btn.innerHTML = '<i class="fas fa-lock"></i> 私密';
+                }
+            }
+            
+            loadImages(currentPage);
+        }
+
+        // 加载年份列表
+        async function loadYears() {
+            try {
+                const response = await fetch(`/api/years${isPrivateMode ? '?private=true' : ''}`);
+                const data = await response.json();
+                if (data.success) {
+                    const container = document.getElementById('yearSelector').querySelector('.container');
+                    // 保留"更新时间"按钮，清除其他内容
+                    const updateTimeBtn = container.querySelector('button');
+                    container.innerHTML = '';
+                    container.appendChild(updateTimeBtn);
+                    
+                    // 添加"全部"选项
+                    const allYearBtn = document.createElement('button');
+                    allYearBtn.className = 'year-btn' + (currentYear === '' ? ' active' : '');
+                    allYearBtn.textContent = '全部';
+                    allYearBtn.onclick = () => selectYear('');
+                    container.appendChild(allYearBtn);
+                    
+                    // 添加年份按钮
+                    data.years.forEach(year => {
+                        const btn = document.createElement('button');
+                        btn.className = 'year-btn' + (currentYear === year ? ' active' : '');
+                        btn.textContent = year;
+                        btn.onclick = () => selectYear(year);
+                        container.appendChild(btn);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading years:', error);
+            }
+        }
+
+        // 选择年份
+        function selectYear(year) {
+            currentYear = year;
+            currentPage = 1;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.year-btn').forEach(btn => {
+                if ((btn.textContent === '全部' && year === '') || 
+                    (btn.textContent === year.toString())) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            loadImages(currentPage);
+        }
+
+        // 加载图片
+        function loadImages(page, tag = '') {
+            currentPage = page;
+            if (tag !== '') currentTag = tag;
+            
+            let url = `/api/public_images?page=${page}&sort=${currentSort}`;
+            if (tag) url += `&tag=${tag}`;
+            if (currentYear) url += `&year=${currentYear}`;
+            if (isPrivateMode) url += '&private=true';
+            
+            console.log('Loading images with params:', {  // 添加日志
+                page: currentPage,
+                tag: currentTag,
+                sort: currentSort,
+                year: currentYear,
+                private: isPrivateMode
+            });
+
+            fetch(url)
+                .then(response => {
+                    console.log('Response status:', response.status);  // 添加日志
+                    if (response.status === 401) {
+                        window.location.href = '/login';  // 未登录时跳转到登录页
+                        return;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received data:', data);  // 添加日志
+                    if (!data) return;
+                    
+                    if (data.error) {
+                        console.error('Error:', data.error);
+                        return;
+                    }
+                    
+                    const container = document.getElementById('waterfall');
+                    if (page === 1) {
+                        container.innerHTML = '';
+                    }
+                    
+                    if (data.by_month) {
+                        // 年份视图：按月份分组显示
+                        container.className = 'year-view';
+                        data.data.forEach(monthGroup => {
+                            const monthSection = document.createElement('div');
+                            monthSection.className = 'month-section';
+                            
+                            const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', 
+                                             '七月', '八月', '九月', '十月', '十一月', '十二月'];
+                            
+                            monthSection.innerHTML = `
+                                <h2 class="month-title">${monthNames[monthGroup._id - 1]}</h2>
+                                <div class="month-images"></div>
+                            `;
+                            
+                            const monthImagesContainer = monthSection.querySelector('.month-images');
+                            monthGroup.images.forEach(image => {
+                                monthImagesContainer.appendChild(createImageCard(image));
+                            });
+                            
+                            container.appendChild(monthSection);
+                        });
+                    } else {
+                        // 普通视图：瀑布流布局
+                        container.className = 'waterfall';
+                        if (data.data && Array.isArray(data.data)) {
+                            data.data.forEach(image => {
+                                container.appendChild(createImageCard(image));
+                            });
+                        } else {
+                            console.error('Invalid images data:', data);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading images:', error);
+                    const container = document.getElementById('waterfall');
+                    if (page === 1) {
+                        container.innerHTML = '<div class="alert alert-danger">加载图片时出错，请稍后重试</div>';
+                    }
+                });
+        }
+
+        // 创建图片卡片
+        function createImageCard(image) {
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            card.dataset.imageId = image._id;
+            
+            // 使用 image.url 而不是手动构建路径
+            card.innerHTML = `
+                <div class="image-container">
+                    <img src="${image.url}" alt="${image.original_filename || ''}" 
+                         onclick="showImage('${image.url}')">
+                </div>
+                <div class="image-info">
+                    <div class="image-info-left">
+                        <div class="tags">
+                            ${image.tags ? image.tags.map(tag => `<span class="tag" onclick="searchTag('${tag}')">${tag}</span>`).join('') : ''}
+                        </div>
+                        <div class="photo-time">${image.photo_time || ''}</div>
+                    </div>
+                    <button class="like-button ${image.likes > 0 ? 'liked' : ''}" onclick="handleCardLike(event, '${image._id}')" title="点赞">
+                        <i class="fas fa-heart"></i>
+                        <span class="like-count">${image.likes || 0}</span>
+                    </button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // 显示图片预览
+        function showImage(src) {
+            // 更新当前图片索引和图片列表
+            allImages = Array.from(document.querySelectorAll('.image-container img'));
+            currentImageIndex = allImages.findIndex(img => img.src === src);
+            
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+            document.getElementById('previewImage').src = src;
+            modal.show();
+        }
+
+        // 处理卡片点赞
+        async function handleCardLike(event, imageId) {
+            event.stopPropagation();
+            const button = event.currentTarget;
+            const countSpan = button.querySelector('.like-count');
+            
+            try {
+                const response = await fetch(`/api/like/${imageId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        countSpan.textContent = data.likes;
+                        button.classList.toggle('liked', data.liked);
+                    }
+                }
+            } catch (error) {
+                console.error('处理点赞时出错:', error);
+            }
+        }
+
+        // 搜索标签函数
+        function searchTag(tag) {
+            currentTag = tag;
+            currentPage = 1;
+            document.getElementById('searchInput').value = tag;
+            loadImages(1, tag);
+        }
+
+        // 搜索功能
+        function performSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const tag = searchInput.value.trim();
+            currentTag = tag;
+            currentPage = 1;
+            loadImages(1, tag);
+        }
+
+        // 加载更多按钮点击事件
+        document.getElementById('loadMore').onclick = () => {
+            loadImages(currentPage + 1, currentTag);
+        };
+
+        // 搜索按钮点击事件
+        document.getElementById('searchButton').onclick = performSearch;
+
+        // 搜索框回车事件
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // 添加更新所有图片时间的函数
+        function updateAllPhotoTimes() {
+            if (!confirm('确定要更新所有图片的拍摄时间吗？这可能需要一些时间。')) {
+                return;
+            }
+            
+            fetch('/api/update_all_photo_times')
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    if (data.success) {
+                        loadImages(currentPage);  // 重新加载当前页图片列表
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('更新失败，请重试');
+                });
+        }
+
+        // 切换私密模式
+        function togglePrivate() {
+            isPrivateMode = !isPrivateMode;
+            console.log('Private mode toggled:', isPrivateMode);  // 添加日志
+            const btn = document.getElementById('privateToggle');
+            
+            // 更新按钮样式
+            if (isPrivateMode) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-lock"></i> 私密中';
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="fas fa-lock"></i> 私密';
+            }
+            
+            // 重新加载年份列表和图片
+            loadYears();
+            currentPage = 1;
+            loadImages(currentPage);
+        }
+
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let isTouchMove = false;
+
+        // 初始加载
+        document.addEventListener('DOMContentLoaded', function() {
+            detectDevice();
+            initTouchEvents();
+            loadImages(currentPage);
+            
+            // 监听设备方向变化
+            if (document.documentElement.classList.contains('mobile-device')) {
+                window.addEventListener('orientationchange', function() {
+                    // 重新调整图片大小和位置
+                    const previewImage = document.getElementById('previewImage');
+                    if (previewImage.src) {
+                        setTimeout(() => {
+                            previewImage.style.maxHeight = '90vh';
+                            previewImage.style.maxWidth = '100%';
+                        }, 100);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

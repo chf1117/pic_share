@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>图片管理 - 图片分享平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding-top: 76px;
+        }
+
+        .navbar {
+            padding: 1rem 2rem;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .manage-container {
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .toolbar {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .image-card {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .image-card.selected {
+            border: 2px solid #0056b3;
+            box-shadow: 0 0 10px rgba(0, 86, 179, 0.3);
+        }
+
+        .image-card img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .image-info {
+            padding: 1rem;
+            background: white;
+        }
+
+        .image-info h5 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .image-info p {
+            margin: 0.5rem 0 0;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .privacy-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            z-index: 2;
+        }
+
+        .privacy-badge i {
+            margin-right: 0.3rem;
+        }
+
+        .btn-group {
+            margin-right: 1rem;
+        }
+
+        .btn-tool {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-tool i {
+            margin-right: 0.5rem;
+        }
+
+        .pagination {
+            margin-top: 2rem;
+            justify-content: center;
+        }
+
+        .modal-content {
+            border-radius: 10px;
+            border: none;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #eee;
+            padding: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #eee;
+            padding: 1.5rem;
+        }
+
+        #alert {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1050;
+            min-width: 300px;
+            max-width: 500px;
+            display: none;
+        }
+
+        .tag-badge {
+            margin: 0.2rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 15px;
+            background-color: #e9ecef;
+            font-size: 0.8rem;
+            color: #495057;
+            display: inline-block;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1060;
+        }
+
+        .image-preview-modal .modal-dialog {
+            max-width: 90%;
+            margin: 1.75rem auto;
+        }
+        .image-preview-modal .modal-content {
+            background-color: rgba(0, 0, 0, 0.9);
+            border: none;
+        }
+        .image-preview-modal .modal-body {
+            padding: 0;
+            text-align: center;
+            position: relative;
+        }
+        .image-preview-modal img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            margin: auto;
+        }
+        .image-preview-modal .modal-header {
+            border: none;
+            padding: 1rem;
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 1;
+        }
+        .image-preview-modal .btn-close {
+            background-color: rgba(255, 255, 255, 0.3);
+            padding: 1rem;
+            margin: 0;
+            border-radius: 50%;
+            backdrop-filter: blur(5px);
+        }
+        .image-preview-modal .btn-close:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">图片分享平台</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/upload">上传</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/manage">管理</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">登录</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/register">注册</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <div class="container">
+        <div class="manage-container">
+            <h1 class="text-center mb-4">图片管理</h1>
+
+            <!-- 工具栏 -->
+            <div class="toolbar mb-4" id="batchToolbar">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-outline-secondary btn-tool" id="selectAllBtn">
+                            <i class="fas fa-check-square"></i>全选
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-tool" id="unselectAllBtn">
+                            <i class="fas fa-square"></i>取消全选
+                        </button>
+                    </div>
+                    
+                    <button type="button" class="btn btn-danger btn-tool btn-batch" onclick="batchDeleteImages()" disabled>
+                        <i class="fas fa-trash-alt"></i>删除
+                    </button>
+                    <button type="button" class="btn btn-info btn-tool btn-batch" onclick="batchTagImages()" disabled>
+                        <i class="fas fa-tags"></i>标签
+                    </button>
+                    <button type="button" class="btn btn-success btn-tool btn-batch" onclick="batchPublicImages()" disabled>
+                        <i class="fas fa-globe"></i>公开
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-tool btn-batch" onclick="batchPrivateImages()" disabled>
+                        <i class="fas fa-lock"></i>私密
+                    </button>
+                    
+                    <span class="ms-auto" id="selectedCount">已选择 0 张图片</span>
+                </div>
+            </div>
+
+            <!-- 图片网格 -->
+            <div id="imageGrid" class="image-grid"></div>
+
+            <!-- 分页 -->
+            <nav aria-label="分页导航">
+                <ul id="pagination" class="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要删除选中的图片吗？此操作不可恢复。</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">确认删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 标签编辑模态框 -->
+    <div class="modal fade" id="tagModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">编辑标签</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="tagInput" class="form-label">输入标签（用逗号分隔）</label>
+                        <input type="text" class="form-control" id="tagInput">
+                    </div>
+                    <div id="currentTags"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveTags">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片预览模态框 -->
+    <div class="modal fade image-preview-modal" id="imagePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <img id="previewImage" src="" alt="预览图片">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载动画 -->
+    <div class="loading-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="alert"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量声明
+        let currentPage = 1;
+        let totalImages = 0;
+        let selectedImages = new Set();
+        let imageGrid = null;
+        let paginationContainer = null;
+        let batchToolbar = null;
+        let loadingOverlay = null;
+        let searchInput = null;
+        let selectAllBtn = null;
+        let unselectAllBtn = null;
+
+        function init() {
+            // 初始化DOM元素引用
+            imageGrid = document.getElementById('imageGrid');
+            paginationContainer = document.getElementById('pagination');
+            batchToolbar = document.getElementById('batchToolbar');
+            loadingOverlay = document.getElementById('loadingOverlay');
+            searchInput = document.getElementById('searchInput');
+            selectAllBtn = document.getElementById('selectAllBtn');
+            unselectAllBtn = document.getElementById('unselectAllBtn');
+            
+            setupEventListeners();
+            loadImages();
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', debounce(() => {
+                    currentPage = 1;
+                    loadImages();
+                }, 500));
+            }
+        }
+
+        async function loadImages() {
+            try {
+                showLoading();
+                const searchQuery = searchInput ? searchInput.value : '';
+                const response = await fetch(`/api/images?page=${currentPage}&search=${encodeURIComponent(searchQuery)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    totalImages = data.total;
+                    renderImages(data.images);
+                    renderPagination(data.total);
+                    updateBatchToolbar();
+                } else {
+                    showMessage(data.message || '加载图片失败', 'danger');
+                }
+            } catch (error) {
+                console.error('Error loading images:', error);
+                showMessage('加载图片时发生错误', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderImages(images) {
+            if (!imageGrid) return;
+            
+            imageGrid.innerHTML = images.map(image => `
+                <div class="image-card ${selectedImages.has(image._id) ? 'selected' : ''}" 
+                     data-image-id="${image._id}" 
+                     onclick="toggleSelectImage('${image._id}')">
+                    <div class="privacy-badge">
+                        <i class="fas fa-${image.is_public ? 'globe' : 'lock'}"></i>
+                        ${image.is_public ? '公开' : '私密'}
+                    </div>
+                    <img src="/uploads/${image.filename}" 
+                         alt="${image.filename}"
+                         onclick="previewImage('/uploads/${image.filename}'); event.stopPropagation();">
+                    <div class="image-info">
+                        <h5 title="${image.filename}">${image.filename}</h5>
+                        <p>上传时间：${formatDate(image.upload_time)}</p>
+                        <div class="tags">
+                            ${(image.tags || []).map(tag => 
+                                `<span class="tag-badge">${tag}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderPagination(total) {
+            if (!paginationContainer) return;
+            
+            const pageSize = 12;
+            const totalPages = Math.ceil(total / pageSize);
+            
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+            
+            let html = '<ul class="pagination">';
+            
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+                        </li>
+                    `;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+            }
+            
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+            
+            html += '</ul>';
+            paginationContainer.innerHTML = html;
+        }
+
+        function changePage(page) {
+            if (page < 1 || page > Math.ceil(totalImages / 12)) return;
+            currentPage = page;
+            loadImages();
+        }
+
+        function selectAllImages() {
+            const imageCards = document.querySelectorAll('.image-card');
+            imageCards.forEach(card => {
+                const imageId = card.dataset.imageId;
+                selectedImages.add(imageId);
+                card.classList.add('selected');
+            });
+            updateBatchToolbar();
+        }
+
+        function unselectAllImages() {
+            const imageCards = document.querySelectorAll('.image-card');
+            imageCards.forEach(card => {
+                card.classList.remove('selected');
+            });
+            selectedImages.clear();
+            updateBatchToolbar();
+        }
+
+        function toggleSelectImage(imageId) {
+            const imageCard = document.querySelector(`.image-card[data-image-id="${imageId}"]`);
+            if (!imageCard) return;
+
+            if (selectedImages.has(imageId)) {
+                selectedImages.delete(imageId);
+                imageCard.classList.remove('selected');
+            } else {
+                selectedImages.add(imageId);
+                imageCard.classList.add('selected');
+            }
+            
+            updateBatchToolbar();
+        }
+
+        function updateBatchToolbar() {
+            if (!batchToolbar) return;
+            
+            const selectedCount = selectedImages.size;
+            const batchButtons = batchToolbar.querySelectorAll('.btn-batch');
+            
+            batchButtons.forEach(btn => {
+                btn.disabled = selectedCount === 0;
+            });
+            
+            const countText = document.getElementById('selectedCount');
+            if (countText) {
+                countText.textContent = `已选择 ${selectedCount} 张图片`;
+            }
+        }
+
+        async function batchDeleteImages() {
+            if (selectedImages.size === 0) return;
+            
+            if (!confirm(`确定要删除选中的 ${selectedImages.size} 张图片吗？此操作不可恢复！`)) {
+                return;
+            }
+            
+            try {
+                showLoading();
+                const response = await fetch('/api/images/batch-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_ids: Array.from(selectedImages)
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showMessage(`成功删除 ${selectedImages.size} 张图片`, 'success');
+                    selectedImages.clear();
+                    loadImages();
+                } else {
+                    showMessage(data.message || '删除失败', 'danger');
+                }
+            } catch (error) {
+                console.error('Error deleting images:', error);
+                showMessage('删除图片时发生错误', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function batchTagImages() {
+            if (selectedImages.size === 0) return;
+            
+            const tagModal = new bootstrap.Modal(document.getElementById('tagModal'));
+            const tagInput = document.getElementById('tagInput');
+            const saveTagsBtn = document.getElementById('saveTags');
+            
+            const handleSave = async () => {
+                const tags = tagInput.value.split(',')
+                    .map(tag => tag.trim())
+                    .filter(tag => tag.length > 0);
+                
+                if (tags.length === 0) {
+                    showMessage('请输入至少一个标签', 'warning');
+                    return;
+                }
+                
+                try {
+                    showLoading();
+                    const response = await fetch('/api/images/batch-tags', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            image_ids: Array.from(selectedImages),
+                            tags: tags
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        showMessage('标签更新成功', 'success');
+                        tagModal.hide();
+                        loadImages();
+                    } else {
+                        showMessage(data.message || '更新标签失败', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error updating tags:', error);
+                    showMessage('更新标签时发生错误', 'danger');
+                } finally {
+                    hideLoading();
+                }
+            };
+            
+            saveTagsBtn.onclick = handleSave;
+            tagModal.show();
+        }
+
+        async function batchPublicImages() {
+            if (selectedImages.size === 0) return;
+            
+            try {
+                showLoading();
+                const response = await fetch('/api/images/batch-public', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_ids: Array.from(selectedImages),
+                        is_public: true
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showMessage('已将选中的图片设为公开', 'success');
+                    loadImages();
+                } else {
+                    showMessage(data.message || '设置失败', 'danger');
+                }
+            } catch (error) {
+                console.error('Error setting images public:', error);
+                showMessage('设置图片状态时发生错误', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function batchPrivateImages() {
+            if (selectedImages.size === 0) return;
+            
+            try {
+                showLoading();
+                const response = await fetch('/api/images/batch-public', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_ids: Array.from(selectedImages),
+                        is_public: false
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showMessage('已将选中的图片设为私密', 'success');
+                    loadImages();
+                } else {
+                    showMessage(data.message || '设置失败', 'danger');
+                }
+            } catch (error) {
+                console.error('Error setting images private:', error);
+                showMessage('设置图片状态时发生错误', 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function previewImage(src) {
+            const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+            document.getElementById('previewImage').src = src;
+            modal.show();
+        }
+
+        function showLoading() {
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+            }
+        }
+
+        function hideLoading() {
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        function showMessage(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            if (!alert) return;
+            
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                if (alert.style.display === 'block') {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            }, 3000);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) {
+                return '刚刚';
+            }
+            
+            if (diff < 3600000) {
+                return `${Math.floor(diff / 60000)}分钟前`;
+            }
+            
+            if (diff < 86400000) {
+                return `${Math.floor(diff / 3600000)}小时前`;
+            }
+            
+            if (diff < 2592000000) {
+                return `${Math.floor(diff / 86400000)}天前`;
+            }
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hour = String(date.getHours()).padStart(2, '0');
+            const minute = String(date.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day} ${hour}:${minute}`;
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function setupEventListeners() {
+            if (selectAllBtn) {
+                selectAllBtn.addEventListener('click', selectAllImages);
+            }
+            if (unselectAllBtn) {
+                unselectAllBtn.addEventListener('click', unselectAllImages);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
