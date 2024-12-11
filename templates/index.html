@@ -1106,7 +1106,7 @@
             // 使用 image.url 而不是手动构建路径
             card.innerHTML = `
                 <div class="image-container">
-                    <img src="${image.url}" alt="${image.original_filename || ''}" 
+                    <img loading="lazy" src="${image.url}" alt="${image.original_filename || ''}" 
                          onclick="showImage('${image.url}')">
                 </div>
                 <div class="image-info">

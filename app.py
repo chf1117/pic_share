@@ -1,21 +1,37 @@
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 from datetime import datetime
 import time
 import piexif
 from pathlib import Path
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_from_directory, session
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_from_directory, session, make_response
 from flask_pymongo import PyMongo
 from werkzeug.utils import secure_filename
 from bson import ObjectId
 import logging
 from PIL import Image
 from utils import save_image, get_image_metadata
+from datetime import datetime, timedelta
+from werkzeug.http import http_date
 
 # 创建Flask应用
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key'  # 用于session
+
+# 配置日志
+if not os.path.exists('logs'):
+    os.mkdir('logs')
+file_handler = RotatingFileHandler('logs/pic_app.log', maxBytes=10240, backupCount=10)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+file_handler.setLevel(logging.INFO)
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
+app.logger.info('Pic app startup')
 
 # 配置应用的密钥和MongoDB数据库
-app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['MONGO_URI'] = 'mongodb://localhost:27017/your_database_name'
 
 # 使用 pathlib 处理路径，确保跨平台兼容性
@@ -539,23 +555,70 @@ def like_image(image_id):
 # 提供图片文件访问
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
-    """提供图片文件访问"""
+    """提供图片文件访问，添加缓存控制"""
     try:
-        # 添加错误日志以帮助调试
-        app.logger.info(f"Attempting to serve file: {filename}")
-        app.logger.info(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
+        # 记录基本请求信息
+        app.logger.info("=" * 50)
+        app.logger.info(f"Serving file: {filename}")
+        app.logger.info(f"Request method: {request.method}")
+        app.logger.info(f"Request headers:")
+        for header, value in request.headers.items():
+            app.logger.info(f"  {header}: {value}")
         
-        # 使用 pathlib.Path 处理路径
         file_path = Path(app.config['UPLOAD_FOLDER']) / filename
-        app.logger.info(f"Full file path: {file_path.as_posix()}")
         
         if not file_path.exists():
             app.logger.error(f"File not found: {file_path}")
             return "File not found", 404
             
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        # 获取文件信息并记录
+        stats = file_path.stat()
+        file_mtime = datetime.fromtimestamp(stats.st_mtime)
+        file_size = stats.st_size
+        app.logger.info(f"File stats:")
+        app.logger.info(f"  Modified time: {file_mtime}")
+        app.logger.info(f"  Size: {file_size} bytes")
+        
+        # 生成更强壮的ETag（结合修改时间和文件大小）
+        etag = f'"{stats.st_mtime_ns}-{stats.st_size}"'
+        app.logger.info(f"Generated ETag: {etag}")
+        
+        # 检查和记录缓存验证信息
+        if_none_match = request.headers.get('If-None-Match')
+        app.logger.info(f"Client If-None-Match: {if_none_match}")
+        
+        if if_none_match and if_none_match == etag:
+            app.logger.info("Cache HIT - returning 304 Not Modified")
+            response = make_response('', 304)
+            response.headers['ETag'] = etag
+            response.headers['Cache-Control'] = 'public, max-age=1209600, must-revalidate'
+            return response
+        else:
+            if not if_none_match:
+                app.logger.info("Cache MISS - No If-None-Match header")
+            else:
+                app.logger.info(f"Cache MISS - ETag mismatch (client: {if_none_match}, server: {etag})")
+            
+        # 设置响应
+        response = send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        
+        # 设置缓存控制头
+        response.headers['Cache-Control'] = 'public, max-age=1209600, must-revalidate'
+        response.headers['ETag'] = etag
+        response.headers['Last-Modified'] = http_date(file_mtime)
+        response.headers['Expires'] = http_date(datetime.now() + timedelta(days=14))
+        
+        app.logger.info("Response headers:")
+        for header, value in response.headers.items():
+            app.logger.info(f"  {header}: {value}")
+        
+        app.logger.info("Returning 200 OK with full response")
+        app.logger.info("=" * 50)
+        return response
+        
     except Exception as e:
         app.logger.error(f"Error serving file {filename}: {str(e)}")
+        app.logger.exception("Full exception details:")
         return "Error serving file", 500
 
 # 批量删除图片

@@ -39,9 +39,18 @@ instance/
 uploads/*
 !uploads/.gitkeep
 ssl/
+logs/*
+!logs/.gitkeep
 *.log
 *.db
 
 # Environment variables
 .env
 .env.*
+
+# MongoDB data
+data/
+dump/
+
+# Test files
+test_cache.py
