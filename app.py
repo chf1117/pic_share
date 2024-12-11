@@ -19,20 +19,24 @@ from werkzeug.http import http_date
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'  # 用于session
 
+# 配置MongoDB
+app.config['MONGO_URI'] = os.getenv('MONGO_URI', 'mongodb://localhost:27017/your_database_name')
+
 # 配置日志
 if not os.path.exists('logs'):
-    os.mkdir('logs')
-file_handler = RotatingFileHandler('logs/pic_app.log', maxBytes=10240, backupCount=10)
-file_handler.setFormatter(logging.Formatter(
+    os.makedirs('logs')
+log_file = os.path.join('logs', 'pic_app.log')
+handler = RotatingFileHandler(log_file, maxBytes=10000000, backupCount=5)
+handler.setFormatter(logging.Formatter(
     '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
 ))
-file_handler.setLevel(logging.INFO)
-app.logger.addHandler(file_handler)
+handler.setLevel(logging.INFO)
+app.logger.addHandler(handler)
 app.logger.setLevel(logging.INFO)
 app.logger.info('Pic app startup')
 
 # 配置应用的密钥和MongoDB数据库
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/your_database_name'
+# app.config['MONGO_URI'] = 'mongodb://localhost:27017/your_database_name'
 
 # 使用 pathlib 处理路径，确保跨平台兼容性
 BASE_DIR = Path(__file__).resolve().parent

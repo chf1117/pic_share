@@ -19,7 +19,6 @@ var/
 wheels/
 *.egg-info/
 .installed.cfg
-*.egg
 
 # Virtual Environment
 venv/
@@ -31,26 +30,20 @@ ENV/
 *.swp
 *.swo
 
-# Flask
-instance/
-.webassets-cache
-
-# Project specific
+# Application specific
 uploads/*
 !uploads/.gitkeep
-ssl/
 logs/*
 !logs/.gitkeep
 *.log
 *.db
-
-# Environment variables
+instance/
 .env
-.env.*
 
-# MongoDB data
-data/
-dump/
+# MongoDB backups
+backup_*/
+*_backup_*/
 
-# Test files
-test_cache.py
+# System
+.DS_Store
+Thumbs.db
