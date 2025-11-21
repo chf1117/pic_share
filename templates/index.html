@@ -1103,11 +1103,28 @@
             card.className = 'image-card';
             card.dataset.imageId = image._id;
             
-            // 使用 image.url 而不是手动构建路径
+            // 使用缩略图 URL（优先）或原图 URL
+            const thumbnailUrl = image.thumbnail_url || image.url;
+            // 大图使用 WebP URL（优先）或原图 URL
+            const fullImageUrl = image.webp_url || image.url;
+            
+            // 使用 picture 标签支持 WebP 回退
+            const imageHtml = image.has_thumbnail ? `
+                <picture>
+                    <source srcset="${thumbnailUrl}" type="image/webp">
+                    <img loading="lazy" src="${image.url}" alt="${image.original_filename || ''}" 
+                         onclick="showImage('${fullImageUrl}', '${image.url}')"
+                         style="width: 100%; height: auto; display: block; cursor: pointer;">
+                </picture>
+            ` : `
+                <img loading="lazy" src="${image.url}" alt="${image.original_filename || ''}" 
+                     onclick="showImage('${image.url}', '${image.url}')"
+                     style="width: 100%; height: auto; display: block; cursor: pointer;">
+            `;
+            
             card.innerHTML = `
                 <div class="image-container">
-                    <img loading="lazy" src="${image.url}" alt="${image.original_filename || ''}" 
-                         onclick="showImage('${image.url}')">
+                    ${imageHtml}
                 </div>
                 <div class="image-info">
                     <div class="image-info-left">
@@ -1127,14 +1144,33 @@
         }
 
         // 显示图片预览
-        function showImage(src) {
+        function showImage(webpSrc, fallbackSrc) {
             // 更新当前图片索引和图片列表
-            allImages = Array.from(document.querySelectorAll('.image-container img'));
-            currentImageIndex = allImages.findIndex(img => img.src === src);
+            allImages = Array.from(document.querySelectorAll('.image-container img, .image-container picture img'));
+            currentImageIndex = allImages.findIndex(img => {
+                const imgSrc = img.src || img.getAttribute('src');
+                return imgSrc === webpSrc || imgSrc === fallbackSrc;
+            });
             
-            // 显示模态框
+            // 显示模态框，优先使用 WebP
             const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
-            document.getElementById('previewImage').src = src;
+            const previewImg = document.getElementById('previewImage');
+            
+            // 使用 picture 标签支持 WebP 回退
+            if (webpSrc && webpSrc !== fallbackSrc) {
+                // 有 WebP 版本，使用 picture 标签
+                const pictureHtml = `
+                    <picture>
+                        <source srcset="${webpSrc}" type="image/webp">
+                        <img src="${fallbackSrc}" alt="Preview" style="max-width: 100%; max-height: 90vh; object-fit: contain;">
+                    </picture>
+                `;
+                previewImg.parentElement.innerHTML = pictureHtml;
+            } else {
+                // 没有 WebP，直接使用原图
+                previewImg.src = fallbackSrc;
+            }
+            
             modal.show();
         }
 

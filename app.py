@@ -346,16 +346,21 @@ def upload_file():
             return jsonify({'error': '不支持的文件类型'}), 400
         
         try:
-            # 保存文件
-            file_path = save_image(file, app.config['UPLOAD_FOLDER'])
+            # 保存文件并生成缩略图和 WebP
+            save_result = save_image(file, app.config['UPLOAD_FOLDER'])
             
             # 获取元数据
-            metadata = get_image_metadata(file_path)
+            metadata = get_image_metadata(save_result['original_path'])
             
             # 保存到数据库
             image_data = {
-                'filename': Path(file_path).name,
-                'path': file_path,
+                'filename': save_result['filename'],
+                'path': save_result['original_path'],
+                'thumbnail_path': save_result.get('thumbnail_path'),
+                'webp_path': save_result.get('webp_path'),
+                'has_thumbnail': bool(save_result.get('thumbnail_path')),
+                'has_webp': bool(save_result.get('webp_path')),
+                'file_sizes': save_result.get('file_sizes', {}),
                 'upload_time': datetime.now(),
                 'photo_time': metadata.get('photo_time', datetime.now()),  # 使用拍摄时间
                 'year': metadata.get('year', datetime.now().year),  # 年份
@@ -363,19 +368,29 @@ def upload_file():
                 'metadata': metadata,
                 'is_public': True,  # 默认设置为公开
                 'likes': 0,
-                'tags': []
+                'tags': [],
+                'processing_status': 'completed'
             }
             
             mongo.db.images.insert_one(image_data)
             
             return jsonify({
+                'success': True,
                 'message': '文件上传成功',
-                'filename': Path(file_path).name
+                'filename': save_result['filename'],
+                'paths': {
+                    'original': save_result['original_path'],
+                    'thumbnail': save_result.get('thumbnail_path'),
+                    'webp': save_result.get('webp_path')
+                },
+                'sizes': save_result.get('file_sizes', {}),
+                'has_thumbnail': bool(save_result.get('thumbnail_path')),
+                'has_webp': bool(save_result.get('webp_path'))
             })
             
         except Exception as e:
             app.logger.error(f"上传文件时发生错误: {str(e)}")
-            return jsonify({'error': '上传文件时发生错误'}), 500
+            return jsonify({'success': False, 'error': '上传文件时发生错误'}), 500
 
     return render_template('upload.html')
 
@@ -426,6 +441,30 @@ def get_images():
         if 'photo_time' not in image and 'upload_time' in image:
             image['photo_time'] = image['upload_time']
             app.logger.debug(f'使用upload_time作为photo_time: {image["photo_time"]}')
+        
+        # 处理图片 URL（优先使用缩略图）
+        # 列表页使用缩略图，详情页使用 WebP
+        if image.get('thumbnail_path'):
+            # 有缩略图，使用缩略图
+            image['thumbnail_url'] = '/' + image['thumbnail_path'].replace('\\', '/')
+        else:
+            # 没有缩略图，使用原图
+            image['thumbnail_url'] = '/' + image['path'].replace('\\', '/')
+        
+        # 详情页 URL（优先使用 WebP）
+        if image.get('webp_path'):
+            image['webp_url'] = '/' + image['webp_path'].replace('\\', '/')
+        else:
+            image['webp_url'] = None
+        
+        # 原图 URL
+        image['url'] = '/' + image['path'].replace('\\', '/')
+        
+        # 兼容性：如果没有新字段，设置默认值
+        if 'has_thumbnail' not in image:
+            image['has_thumbnail'] = False
+        if 'has_webp' not in image:
+            image['has_webp'] = False
         
         # 将datetime对象转换为ISO格式字符串
         if 'photo_time' in image:

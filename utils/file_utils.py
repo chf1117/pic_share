@@ -1,3 +1,16 @@
+"""
+文件处理工具模块
+
+功能：
+1. 安全保存上传的图片文件
+2. 生成缩略图和 WebP 格式
+3. 获取图片 EXIF 元数据
+
+作者: chf1117
+版本: v1.2
+日期: 2025-11-11
+"""
+
 from pathlib import Path
 import os
 import piexif
@@ -5,19 +18,33 @@ from PIL import Image
 from werkzeug.utils import secure_filename
 import logging
 from datetime import datetime
+from .image_processor import ImageProcessor
 
 logger = logging.getLogger(__name__)
 
-def save_image(file, upload_folder):
+
+def save_image(file, upload_folder, generate_variants=True):
     """
-    安全地保存上传的图片文件
+    安全地保存上传的图片文件，并生成缩略图和 WebP 格式
     
     Args:
         file: FileStorage对象
         upload_folder: 上传文件夹路径
+        generate_variants: 是否生成缩略图和 WebP（默认 True）
     
     Returns:
-        保存的文件路径
+        包含所有文件路径的字典:
+        {
+            'original_path': 原图路径,
+            'thumbnail_path': 缩略图路径（可能为 None）,
+            'webp_path': WebP 路径（可能为 None）,
+            'filename': 文件名,
+            'file_sizes': {
+                'original': 原图大小,
+                'thumbnail': 缩略图大小,
+                'webp': WebP 大小
+            }
+        }
     """
     try:
         # 保留原始文件名，但确保安全
@@ -37,14 +64,53 @@ def save_image(file, upload_folder):
             save_path = save_path.with_name(new_name)
             counter += 1
             
-        # 保存文件
+        # 保存原图
         file.save(str(save_path))
         logger.info(f"Successfully saved image to {save_path.as_posix()}")
-        return str(save_path)
+        
+        # 初始化返回结果
+        result = {
+            'original_path': str(save_path),
+            'thumbnail_path': None,
+            'webp_path': None,
+            'filename': save_path.name,
+            'file_sizes': {
+                'original': save_path.stat().st_size,
+                'thumbnail': 0,
+                'webp': 0
+            }
+        }
+        
+        # 生成缩略图和 WebP
+        if generate_variants:
+            try:
+                processor = ImageProcessor(upload_folder)
+                processed = processor.process_image(str(save_path))
+                
+                result['thumbnail_path'] = processed.get('thumbnail')
+                result['webp_path'] = processed.get('webp')
+                
+                # 更新文件大小
+                if result['thumbnail_path']:
+                    result['file_sizes']['thumbnail'] = Path(result['thumbnail_path']).stat().st_size
+                if result['webp_path']:
+                    result['file_sizes']['webp'] = Path(result['webp_path']).stat().st_size
+                
+                logger.info(
+                    f"Image processing completed: {filename} "
+                    f"(thumbnail: {bool(result['thumbnail_path'])}, "
+                    f"webp: {bool(result['webp_path'])})"
+                )
+            except Exception as e:
+                logger.error(f"Error generating variants for {filename}: {str(e)}")
+                # 继续执行，不影响原图保存
+        
+        return result
         
     except Exception as e:
         logger.error(f"Error saving image: {str(e)}")
         raise
+
 
 def get_image_metadata(image_path):
     """
