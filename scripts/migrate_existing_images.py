@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 class ImageMigrator:
     """图片迁移处理器"""
     
-    def __init__(self, mongo_uri, db_name, upload_folder, dry_run=False):
+    def __init__(self, mongo_uri, db_name, upload_folder, dry_run=False, force=False):
         """
         初始化迁移处理器
         
@@ -58,6 +58,7 @@ class ImageMigrator:
         self.db_name = db_name
         self.upload_folder = Path(upload_folder)
         self.dry_run = dry_run
+        self.force = force
         
         # 连接数据库
         self.client = MongoClient(mongo_uri)
@@ -77,7 +78,7 @@ class ImageMigrator:
             'webp_generated': 0
         }
     
-    def get_images_to_process(self, skip_existing=True, force=False):
+    def get_images_to_process(self, skip_existing=True, force=None):
         """
         获取需要处理的图片列表
         
@@ -90,6 +91,10 @@ class ImageMigrator:
         """
         query = {}
         
+        # 如果未显式传入 force，则使用实例上的默认设置
+        if force is None:
+            force = self.force
+
         if skip_existing and not force:
             # 只处理没有缩略图或 WebP 的图片
             query = {
@@ -139,7 +144,7 @@ class ImageMigrator:
         
         try:
             # 检查是否已有缩略图
-            if not image_record.get('has_thumbnail'):
+            if self.force or not image_record.get('has_thumbnail'):
                 thumbnail_path = self.processor.generate_thumbnail(original_path)
                 if thumbnail_path:
                     result['thumbnail_path'] = thumbnail_path
@@ -150,7 +155,7 @@ class ImageMigrator:
                 logger.info(f"跳过已有缩略图: {original_path}")
             
             # 检查是否已有 WebP
-            if not image_record.get('has_webp'):
+            if self.force or not image_record.get('has_webp'):
                 webp_path = self.processor.generate_webp(original_path)
                 if webp_path:
                     result['webp_path'] = webp_path
@@ -227,7 +232,7 @@ class ImageMigrator:
         except Exception as e:
             logger.error(f"数据库更新失败 {image_id}: {str(e)}")
     
-    def run(self, batch_size=10, skip_existing=True, force=False):
+    def run(self, batch_size=10, skip_existing=True, force=None):
         """
         运行迁移任务
         
@@ -243,6 +248,10 @@ class ImageMigrator:
         logger.info(f"上传目录: {self.upload_folder}")
         logger.info("=" * 60)
         
+        # 如果未显式传入 force，则使用实例上的默认设置
+        if force is None:
+            force = self.force
+
         # 获取需要处理的图片
         images = self.get_images_to_process(skip_existing, force)
         
@@ -335,7 +344,8 @@ def main():
         mongo_uri=args.mongo_uri,
         db_name=args.db_name,
         upload_folder=args.upload_folder,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        force=args.force
     )
     
     try:

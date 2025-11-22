@@ -70,6 +70,39 @@ mongo.db.images.create_index([("photo_time", -1)])  # 添加拍摄时间索引
 # 设置日志级别
 app.logger.setLevel(logging.INFO)
 
+
+def build_image_url(path_value: str) -> str:
+    """将任意形式的图片路径规范化为以 /uploads/ 开头的 URL。
+
+    兼容以下几种情况：
+    - 数据库存的是相对路径："uploads/xxx.webp"
+    - 数据库存的是绝对路径："/var/www/pic/uploads/xxx.webp" 或 "var/www/pic/uploads/xxx.webp"
+    - Windows 风格路径："uploads\\xxx.webp" 或 "C:\\...\\uploads\\xxx.webp"
+    """
+    if not path_value:
+        return None
+
+    # 统一使用正斜杠
+    web_path = str(path_value).replace('\\', '/').lstrip()
+
+    # 如果包含 uploads/，只保留从 uploads/ 开始的部分
+    if 'uploads/' in web_path:
+        web_path = web_path[web_path.index('uploads/'):]
+    else:
+        # 不包含 uploads/，则保证前缀为 uploads/
+        web_path = web_path.lstrip('/')
+        if not web_path.startswith('uploads/'):
+            web_path = 'uploads/' + web_path
+
+    # 最终保证是以 /uploads/ 开头
+    if not web_path.startswith('uploads/'):
+        # 再次兜底处理
+        idx = web_path.rfind('uploads/')
+        if idx != -1:
+            web_path = web_path[idx:]
+
+    return '/' + web_path
+
 def get_photo_time(image_path):
     """从图片中获取拍摄时间，优先使用EXIF数据，如果没有则使用文件修改时间"""
     try:
@@ -226,9 +259,25 @@ def get_public_images():
                     
                     # 处理ObjectId
                     image['_id'] = str(image['_id'])
-                    # 添加文件URL
-                    image_path = str(Path('uploads') / image['filename'])
-                    image['url'] = f"/{image_path.replace(os.sep, '/')}"
+
+                    # 统一构造原图 URL
+                    if image.get('path'):
+                        image['url'] = build_image_url(image['path'])
+                    else:
+                        # 兼容旧数据，仅有 filename
+                        image['url'] = build_image_url(str(Path('uploads') / image['filename']))
+
+                    # 列表页使用缩略图，详情页使用 WebP，与 /api/images 保持一致
+                    if image.get('thumbnail_path'):
+                        image['thumbnail_url'] = build_image_url(image['thumbnail_path'])
+                    else:
+                        image['thumbnail_url'] = image['url']
+
+                    if image.get('webp_path'):
+                        image['webp_url'] = build_image_url(image['webp_path'])
+                    else:
+                        image['webp_url'] = None
+
                     # 格式化photo_time
                     image['photo_time'] = image['photo_time'].strftime('%Y-%m-%d %H:%M:%S')
                     
@@ -275,8 +324,25 @@ def get_public_images():
         # 处理ObjectId和添加文件URL
         for image in images:
             image['_id'] = str(image['_id'])
-            image_path = str(Path('uploads') / image['filename'])
-            image['url'] = f"/{image_path.replace(os.sep, '/')}"
+
+            # 统一构造原图 URL
+            if image.get('path'):
+                image['url'] = build_image_url(image['path'])
+            else:
+                # 兼容旧数据，仅有 filename
+                image['url'] = build_image_url(str(Path('uploads') / image['filename']))
+
+            # 列表页使用缩略图，详情页使用 WebP，与 /api/images 保持一致
+            if image.get('thumbnail_path'):
+                image['thumbnail_url'] = build_image_url(image['thumbnail_path'])
+            else:
+                image['thumbnail_url'] = image['url']
+
+            if image.get('webp_path'):
+                image['webp_url'] = build_image_url(image['webp_path'])
+            else:
+                image['webp_url'] = None
+
             if isinstance(image.get('photo_time'), datetime):
                 image['photo_time'] = image['photo_time'].strftime('%Y-%m-%d %H:%M:%S')
 

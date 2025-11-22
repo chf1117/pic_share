@@ -47,8 +47,8 @@ class ImageProcessor:
     def generate_thumbnail(
         self, 
         input_path: str, 
-        max_size: int = 200,
-        quality: int = 85
+        max_size: int = 600,
+        quality: int = 95
     ) -> Optional[str]:
         """
         生成保持宽高比的缩略图
@@ -194,8 +194,8 @@ class ImageProcessor:
     def process_image(
         self, 
         input_path: str,
-        thumbnail_size: int = 200,
-        quality: int = 85
+        thumbnail_size: int = 600,
+        quality: int = 95
     ) -> Dict[str, Optional[str]]:
         """
         完整处理图片：生成缩略图和 WebP
