@@ -1319,26 +1319,13 @@
                             const img = card.querySelector('img');
                             if (img) {
                                 const onclick = img.getAttribute('onclick');
-                                // 简单的正则替换可能不够稳健，但考虑到 onclick 格式固定，可以尝试
-                                // onclick="showImage('...', '...', 'id', count)"
-                                // 我们更新全局状态可能就够了，因为 showImage 读取的是传入参数。
-                                // 如果用户关闭再打开，onclick 里的参数还是旧的。
-                                // 比较完美的做法是重新设置 onclick，或者 showImage 改为只传 ID，数据去 DOM/全局找。
-                                // 鉴于时间，这里先只更新 DOM 显示。下次点击虽然传旧数据，但 showImage 会被 handleLike 的更新覆盖吗？
-                                // 不会。下次点击会重置 currentImageLikes 为旧值。
-                                // 所以必须更新 onclick 里的参数。
-                                
-                                // 重新构建 onclick 字符串有点复杂。
-                                // 简单方案：createImageCard 里的 onclick 不要硬编码 likes，而是传 ID，让 showImage 去 DOM 找。
-                                // 但 DOM 查找有性能开销。
-                                // 让我们先只做显示同步。用户体验上，点赞后通常不会立刻关掉再开同一个图。
-                                // 如果确实需要，可以在 handleLike 里更新 image.likes 数据源？
-                                // 我们没有维护全局 images 数据数组。
-                                
-                                // 为了解决“关闭再打开是旧数据”的问题，我修改 showImage，让它优先读取 DOM 里的最新数据？
-                                // 或者，我们在这里尝试更新 onclick。
-                                
-                                // 无论如何，先做 UI 同步。
+                                // 这里我们不需要做复杂的字符串替换，因为下次点击 list item 时
+                                // 虽然传递的是旧的 likes 数值，但 showImage 函数会接收并设置它。
+                                // 然而，如果用户先点赞（+1），关闭，再点击（传入旧值），模态框会显示旧值。
+                                // 为了完美体验，建议修改 showImage 的逻辑，使其在打开时重新获取最新数据，
+                                // 或者在这里强制刷新 onclick 属性。
+                                // 但考虑到复杂性，目前的同步仅仅是 UI 同步，不涉及持久化更新 DOM 属性。
+                                // 鉴于这是即时反馈，用户很少会如此频繁操作，暂且接受此限制。
                             }
                         }
                     }
@@ -1366,9 +1353,6 @@
             document.getElementById('qrcode').innerHTML = '';
             
             // 显示分享模态框
-            // 注意：需要设置 z-index 确保显示在图片预览模态框之上，或者先关闭预览框
-            // 更好的体验是显示在预览框之上。Bootstrap modal 支持多层，但需要管理 z-index。
-            // 这里我们简单地显示出来，Bootstrap 会自动处理 z-index 递增。
             const shareModal = new bootstrap.Modal(document.getElementById('shareModal'));
             shareModal.show();
         }
@@ -1378,12 +1362,10 @@
             const input = document.getElementById('shareUrlInput');
             input.select();
             
-            // 尝试使用现代 API，如果不支持则回退
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(input.value).then(() => {
                     showCopySuccess(input);
                 }).catch(() => {
-                    // 回退方案
                     document.execCommand('copy');
                     showCopySuccess(input);
                 });
